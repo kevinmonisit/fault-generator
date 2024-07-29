@@ -289,8 +289,6 @@ def display_arg_setter(stdscr, fault_name, num_args):
     return args
 
 def display_creator(stdscr):
-
-
     question1 = "Select a set of P-Leaf routers by pressing space to use and press ENTER:"
     selected_p_leaf_routers = display_menu_checkboxes(stdscr, question1, p_leaf_routers)
 
@@ -365,30 +363,51 @@ def display_creator(stdscr):
         file.write(csv)
 
     stdscr.clear()
-    stdscr.addstr(0, 0, f"Thank you! File written to {SAVED_SCENARIO_PATH}. Press ENTER to exit.")
+    stdscr.addstr(0, 0, f"Success! File written to {SAVED_SCENARIO_PATH}. Press ENTER to conintue.")
     stdscr.refresh()
     stdscr.getch()
 
-    return
+def display_scenarios(stdscr):
+    # read from test_scenarios folder and get a list of filenames
+
+    scenario_filenames = os.listdir(SAVED_SCENARIO_PATH)
+    csv_len = len(".csv")
+    scenario_names = [name[:-csv_len] for name in scenario_filenames]
+    scenario_names.append("Back")
+
+    question = "Select a scenario to execute and press ENTER:"
+    selected_scenario = display_menu_radio(stdscr, question, scenario_names)
+
+    if selected_scenario == "Back":
+        return
+
+    if selected_scenario is not None:
+        file_path = os.path.join(SAVED_SCENARIO_PATH, selected_scenario + ".csv")
+        routers = Action.from_csv(file_path)
+
+        stdscr.clear()
+        stdscr.addstr(0, 0, f"Executing scenario {selected_scenario}. Press ENTER to continue.")
+        stdscr.refresh()
+
 
 def main(stdscr):
 
     menuOptions = [
         "Create a test scenario",
-        "Execute an existing test scenario"
+        "Execute an existing test scenario",
+        "Exit",
     ]
 
-    options = ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5"]
-    question1 = "Choose one of the following menu items and press ENTER:"
-    selected_item_radio = display_menu_radio(stdscr, question1, menuOptions)
+    while True:
+        question1 = "Choose one of the following menu items and press ENTER:"
+        selected_item_radio = display_menu_radio(stdscr, question1, menuOptions)
 
-    if selected_item_radio == "Create a test scenario":
-        display_creator(stdscr)
-        return
-
-    selected_items_checkboxes = display_menu_checkboxes(stdscr, question1, options)
-
-    question2 = "Choose from the following options (radio buttons):"
+        if selected_item_radio == "Create a test scenario":
+            display_creator(stdscr)
+        elif selected_item_radio == "Execute an existing test scenario":
+            display_scenarios(stdscr)
+        elif selected_item_radio == "Exit":
+            break
 
 
 if __name__ == "__main__":
