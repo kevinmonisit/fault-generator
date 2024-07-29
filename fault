@@ -1,5 +1,8 @@
+#!/usr/bin/env python3
+
 import curses
 import csv
+import os
 
 class Router:
     def __init__(self, type, name, ip):
@@ -8,17 +11,34 @@ class Router:
         self.ip = ip
 
     def __repr__(self):
-        return f"Router(type='{self.type}', name='{self.name}', ip='{self.ip}')"
+        return self.__str__()
 
-def read_csv_to_routers(filename):
-    routers = []
-    with open(filename, mode='r') as file:
-        csv_reader = csv.DictReader(file)
+    def __len__(self):
+        return len(self.name)
+
+    def __str__(self):
+        return f"{self.ip} - {self.name}"
+
+def parse_csv_to_routers(file_path):
+    p_leaf_routers = []
+    x_leaf_routers = []
+    emux_routers = []
+
+    with open(file_path, mode='r') as file:
+        csv_reader = csv.reader(file)
         for row in csv_reader:
-            router = Router(row['type'], row['name'], row['ip'])
-            routers.append(router)
-    return routers
+            type, name, ip = row
+            router = Router(type, name, ip)
+            if type == 'P-LEAF':
+                p_leaf_routers.append(router)
+            elif type == 'X-LEAF':
+                x_leaf_routers.append(router)
+            elif type == 'EMUX':
+                emux_routers.append(router)
+            else:
+                print(f"Unknown router type: {type}")
 
+    return p_leaf_routers, x_leaf_routers, emux_routers
 
 class Fault:
     def __init__(self, event, group, n_args, args):
@@ -35,6 +55,34 @@ class Fault:
 
     def __len__(self):
         return len(self.event)
+
+class Action:
+    def __init__(self, fault: Fault, routers: list[Router]):
+        self.fault = fault
+        self.routers = routers
+
+    def to_csv(self):
+        csv = ""
+
+        for router in self.routers:
+            csv += f"{router.ip},"
+            csv += f"{self.fault.event} "
+            for i, arg in enumerate(self.fault.args):
+                csv += f"arg{i + 1} {arg} "
+            csv += "\n"
+
+        return csv
+
+    @staticmethod
+    def from_csv(filepath):
+        with open(filepath, mode='r') as file:
+            csv_reader = csv.reader(file)
+            routers = []
+            for row in csv_reader:
+                ip, action = row
+                routers.append(Router(ip, action))
+        return routers
+
 
 def read_csv_to_faults(filename):
     faults = []
@@ -77,6 +125,7 @@ def display_menu_checkboxes(stdscr, question, options):
         stdscr.addstr(1, width // 2 - len(question) // 2, question)
 
         for idx, option in enumerate(options):
+            option = str(option)
             x = width // 2 - max_option_length // 2
             y = starting_y - len(options) // 2 + idx + 2
             if idx == current_index:
@@ -115,6 +164,7 @@ def display_menu_radio(stdscr, question, options):
     max_option_length = max(len(option) for option in options) + 4
 
     starting_y = 6
+    starting_x = 2
 
     while True:
         stdscr.clear()
@@ -123,6 +173,7 @@ def display_menu_radio(stdscr, question, options):
         stdscr.addstr(1, width // 2 - len(question) // 2, question)
 
         for idx, option in enumerate(options):
+            option = str(option)
             x = width // 2 - max_option_length // 2
             y = starting_y - len(options) // 2 + idx + 2
             if idx == current_index:
@@ -157,15 +208,19 @@ def get_user_input(stdscr, prompt):
     curses.noecho()
     return user_input
 
-p_leaf_routers = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8']
-x_leaf_routers = ['R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15', 'R16']
-emux_routers = ['R17', 'R18', 'R19', 'R20', 'R21', 'R22', 'R23', 'R24']
+
 faults = ['CPU', 'Memory', 'Link', 'Power', 'Fan']
 
-SAVED_SCENARIO_PATH = "/var/tmp/fault-generator"
-OUTPUT_LOGS_PATH = "/var/tmp/fault-generator/logs"
+SAVED_SCENARIO_PATH = "./test_scenarios"
+OUTPUT_LOGS_PATH = "./logs"
 FAULTS_CSV_PATH = "./faults.csv"
-ROUTERS_CSVP_PATH = "./routers.csv"
+ROUTERS_CSV_PATH = "./routers.csv"
+
+fault_list = read_csv_to_faults(FAULTS_CSV_PATH)
+fault_groups = get_fault_groups(fault_list)
+
+p_leaf_routers, x_leaf_routers, emux_routers = parse_csv_to_routers(ROUTERS_CSV_PATH)
+
 
 def display_arg_setter(stdscr, fault_name, num_args):
     curses.curs_set(1)
@@ -224,7 +279,7 @@ def display_arg_setter(stdscr, fault_name, num_args):
             if args[current_arg]:
                 args[current_arg] = args[current_arg][:-1]
         elif 32 <= key <= 126:  # Printable ASCII range
-            if len(args[current_arg]) < 10:  # Limit argument length
+            if len(args[current_arg]) < 10:
                 args[current_arg] = args[current_arg] + chr(key)
 
         stdscr.refresh()
@@ -234,8 +289,7 @@ def display_arg_setter(stdscr, fault_name, num_args):
     return args
 
 def display_creator(stdscr):
-    fault_list = read_csv_to_faults(FAULTS_CSV_PATH)
-    fault_groups = get_fault_groups(fault_list)
+
 
     question1 = "Select a set of P-Leaf routers by pressing space to use and press ENTER:"
     selected_p_leaf_routers = display_menu_checkboxes(stdscr, question1, p_leaf_routers)
@@ -255,6 +309,8 @@ def display_creator(stdscr):
 
     selected_fault_object = get_fault_by_event(fault_list, selected_fault)[0]
     args = display_arg_setter(stdscr, selected_fault, selected_fault_object.n_args)
+
+    selected_fault_object.args = args
 
     stdscr.clear()
     stdscr.addstr(1, 0, "You selected the following P-Leaf routers:")
@@ -289,13 +345,32 @@ def display_creator(stdscr):
     y_offset += 3 + len(args)
     stdscr.addstr(y_offset, 0, "Scenario will be saved to the following path: " + SAVED_SCENARIO_PATH)
     stdscr.addstr(y_offset + 2, 0, "Please enter the name of this file: ")
+    file_name = get_user_input(stdscr, " ")
+
+    # check if user inputted name, if create an error and ask again
+    while True:
+        stdscr.refresh()
+        file_name = get_user_input(stdscr, " ")
+        if file_name == "":
+            stdscr.addstr(y_offset + 3, 0, "Please enter a valid name.")
+        else:
+            break
+
     stdscr.refresh()
-    user_name = get_user_input(stdscr, "")
+    action = Action(selected_fault_object, selected_p_leaf_routers + selected_x_leaf_routers + selected_emux_routers)
+    csv = action.to_csv()
+    # create a path with saved scenario path and filename
+    path = os.path.join(SAVED_SCENARIO_PATH, file_name + ".csv")
+
+    with open(path, mode='w') as file:
+        file.write(csv)
 
     stdscr.clear()
-    stdscr.addstr(0, 0, f"Thank you, {user_name}!")
+    stdscr.addstr(0, 0, f"Thank you! File written to {SAVED_SCENARIO_PATH}. Press ENTER to exit.")
     stdscr.refresh()
     stdscr.getch()
+
+    return
 
 def main(stdscr):
 
@@ -308,8 +383,6 @@ def main(stdscr):
     question1 = "Choose one of the following menu items and press ENTER:"
     selected_item_radio = display_menu_radio(stdscr, question1, menuOptions)
 
-
-
     if selected_item_radio == "Create a test scenario":
         display_creator(stdscr)
         return
@@ -318,26 +391,6 @@ def main(stdscr):
 
     question2 = "Choose from the following options (radio buttons):"
 
-
-    stdscr.clear()
-    stdscr.addstr(1, 0, "You selected (checkboxes):")
-    for i, item in enumerate(selected_items_checkboxes):
-            stdscr.addstr(2 + i, 0, f"- {item}")
-
-    stdscr.addstr(4 + len(selected_items_checkboxes), 0, "You selected (radio button):")
-    if selected_item_radio:
-            stdscr.addstr(5 + len(selected_items_checkboxes), 0, f"- {selected_item_radio}")
-    else:
-            stdscr.addstr(5 + len(selected_items_checkboxes), 0, "- None")
-
-    stdscr.addstr(7 + len(selected_items_checkboxes), 0, "Please enter your name:")
-    stdscr.refresh()
-    user_name = get_user_input(stdscr, "Name: ")
-
-    stdscr.clear()
-    stdscr.addstr(0, 0, f"Thank you, {user_name}!")
-    stdscr.refresh()
-    stdscr.getch()
 
 if __name__ == "__main__":
     curses.wrapper(main)
