@@ -117,6 +117,7 @@ def display_menu_checkboxes(stdscr, question, options):
     current_index = 0
     max_option_length = max(len(option) for option in options) + 4
     starting_y = 6
+    # starting_x = max
 
     while True:
         stdscr.clear()
@@ -126,7 +127,7 @@ def display_menu_checkboxes(stdscr, question, options):
 
         for idx, option in enumerate(options):
             option = str(option)
-            x = width // 2 - max_option_length // 2
+            x = width // 3 - max_option_length // 2
             y = starting_y - len(options) // 2 + idx + 2
             if idx == current_index:
                 stdscr.attron(curses.color_pair(1))
