@@ -348,12 +348,11 @@ def display_creator(stdscr):
     file_name = get_user_input(stdscr, " ")
 
     # check if user inputted name, if create an error and ask again
-    while True:
+    while file_name == "":
         stdscr.refresh()
+        stdscr.addstr(y_offset + 3, 0, "Error! Please enter a valid nonempty name:  ")
         file_name = get_user_input(stdscr, " ")
-        if file_name == "":
-            stdscr.addstr(y_offset + 3, 0, "Please enter a valid name.")
-        else:
+        if file_name != "":
             break
 
     stdscr.refresh()
