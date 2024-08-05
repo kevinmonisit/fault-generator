@@ -1,5 +1,5 @@
 import curses
-from src.types import Action
+from ..context_types import Action
 import os
 from .helpers import *
 from ..helpers import *

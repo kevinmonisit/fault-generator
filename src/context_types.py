@@ -1,8 +1,8 @@
 import os
 import csv
 from .helpers import *
-class Context:
 
+class Context:
   def __init__(self, FAULTS_CSV_PATH, ROUTERS_CSV_PATH, TEST_CASES_PATH, EXECUTION_PATH):
     self.FAULTS_CSV_PATH = FAULTS_CSV_PATH
     self.ROUTERS_CSV_PATH = ROUTERS_CSV_PATH
@@ -56,11 +56,12 @@ class Context:
         headers = next(csv_reader)
         for row in csv_reader:
             event = row[0]
-            router_type = row[1]
-            group = row[2]
-            n_args = int(row[3])
-            args = row[3:3 + n_args]
-            fault = Fault(event, router_type, group, n_args, args)
+            command_prefix = row[1]
+            router_type = row[2]
+            group = row[3]
+            n_args = int(row[4])
+            args = row[4:4 + n_args]
+            fault = Fault(event, command_prefix, router_type, group, n_args, args)
             faults.append(fault)
 
     return faults
@@ -81,9 +82,12 @@ class Router:
         return f"{self.ip} - {self.name}"
 
 class Fault:
-    def __init__(self, event, router_type, group, n_args, args):
+
+    # Command Prefix is the command string before the arguments
+    def __init__(self, event, command_prefix, router_type, group, n_args, args):
         self.router_type = router_type
         self.event = event
+        self.command_prefix = command_prefix
         self.group = group
         self.n_args = n_args
         self.args = args
@@ -108,10 +112,10 @@ class Action:
 
         for router in self.routers:
             csv += f"{router.ip},"
-            csv += f"{self.fault.event} "
+            csv += f"\"{self.fault.command_prefix} "
             for i, arg in enumerate(self.fault.args):
                 csv += f"arg{i + 1} {arg} "
-            csv += "\n"
+            csv += "\"\n"
 
         return csv
 
