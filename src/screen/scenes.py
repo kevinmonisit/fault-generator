@@ -180,7 +180,6 @@ def display_creator(stdscr, context):
 
 
 def display_scenarios(stdscr, context):
-    print("path: \n\n\n", context.TEST_CASES_PATH)
     scenario_names = os.listdir(context.TEST_CASES_PATH)
     scenario_names.append("Back")
 
@@ -191,8 +190,17 @@ def display_scenarios(stdscr, context):
         return
 
     if selected_scenario is not None:
+
+        import subprocess
         file_path = os.path.join(context.TEST_CASES_PATH, selected_scenario)
-        routers = Action.from_csv(file_path)
+
+        options = ['Continue', 'Back']
+        selected_option = display_menu_radio(stdscr, f"Execute scenario {selected_scenario} in {file_path}?", options)
+
+        if selected_option == 'Back':
+            return
+
+        subprocess.run([context.EXECUTION_PATH, file_path])
 
         stdscr.clear()
         stdscr.addstr(0, 0, f"Executing scenario {selected_scenario}. Press ENTER to continue.")

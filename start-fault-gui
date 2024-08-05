@@ -13,7 +13,8 @@ if __name__ == "__main__":
     startup_context = Context(
         config_paths["FAULTS_CSV_PATH"],
         config_paths["ROUTERS_CSV_PATH"],
-        config_paths["TEST_CASES_PATH"]
+        config_paths["TEST_CASES_PATH"],
+        config_paths["GUI_CALL"],
     )
 
     curses.wrapper(main_scene, startup_context)

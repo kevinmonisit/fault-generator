@@ -3,10 +3,11 @@ import csv
 from .helpers import *
 class Context:
 
-  def __init__(self, FAULTS_CSV_PATH, ROUTERS_CSV_PATH, TEST_CASES_PATH):
+  def __init__(self, FAULTS_CSV_PATH, ROUTERS_CSV_PATH, TEST_CASES_PATH, EXECUTION_PATH):
     self.FAULTS_CSV_PATH = FAULTS_CSV_PATH
     self.ROUTERS_CSV_PATH = ROUTERS_CSV_PATH
     self.TEST_CASES_PATH = TEST_CASES_PATH
+    self.EXECUTION_PATH = EXECUTION_PATH
 
     if not os.path.exists(self.FAULTS_CSV_PATH):
         raise FileNotFoundError(f"File not found: {self.FAULTS_CSV_PATH}")
