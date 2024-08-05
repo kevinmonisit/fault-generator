@@ -2,7 +2,7 @@ import curses
 from src.types import Action
 import os
 from .helpers import *
-from ..helpers import get_faults_by_group, get_fault_by_event
+from ..helpers import *
 
 def main_scene(stdscr, context):
     menuOptions = [
@@ -87,53 +87,37 @@ def display_arg_setter(stdscr, fault_name, num_args):
     return args
 
 def display_creator(stdscr, context):
-    question1 = "Select a set of P-Leaf routers by pressing space to use and press ENTER:"
-    selected_p_leaf_routers = display_menu_checkboxes(stdscr, question1, context.p_leaf_routers)
+    router_types = ["P-LEAF", "X-LEAF", "EMUX"]
 
-    question2 = "Select a set of X-Leaf routers to use and press ENTER:"
-    selected_x_leaf_routers = display_menu_checkboxes(stdscr, question2, context.x_leaf_routers)
+    # 1. ASK the user for ROUTER TYPE
+    question = "Select a router type to use and press ENTER:"
+    selected_router_type = display_menu_radio(stdscr, question, router_types)
 
-    question3 = "Select a set of EMUX routers to use and press ENTER:"
-    selected_emux_routers = display_menu_checkboxes(stdscr, question3, context.emux_routers)
+    # 2. ASK the user to select ROUTERS of the selected ROUTER TYPE
+    question = f"Select a set of {selected_router_type} routers to use and press ENTER:"
+    filtered_routers = get_routers_of_type(context.routers, selected_router_type)
+    selected_routers = display_menu_checkboxes(stdscr, question, filtered_routers)
 
-    question4 = "Select a fault group and press ENTER:"
-    selected_fault_group = display_menu_radio(stdscr, question4, context.fault_groups)
+    # 3. ASK the user to select a FAULT GROUP of the selected ROUTER TYPE
+    faults_of_router_type = get_faults_by_router_type(context.fault_list, selected_router_type)
+    question = f"Select a fault group of {selected_router_type} routers and press ENTER:"
+    selected_fault_group = display_menu_radio(stdscr, question, context.fault_groups)
 
-    specific_event_faults = get_faults_by_group(context.fault_list, selected_fault_group)
-    select_fault = "Select a fault from {} and press ENTER:".format(selected_fault_group)
-    selected_fault = display_menu_radio(stdscr, select_fault, specific_event_faults)
+    # 4. ASK the user to select a FAULT from the selected FAULT GROUP
+    question = f"Select a fault from {selected_fault_group} and press ENTER:"
+    specific_event_faults = get_faults_by_group(faults_of_router_type, selected_fault_group)
+    selected_fault = display_menu_radio(stdscr, question, specific_event_faults)
 
-    selected_fault_object = get_fault_by_event(context.fault_list, selected_fault)[0]
+    # 5. ASK the user to set the ARGUMENTS for the selected FAULT
+    selected_fault_object = get_fault_by_event(faults_of_router_type, selected_fault)[0]
     args = display_arg_setter(stdscr, selected_fault, selected_fault_object.n_args)
-
     selected_fault_object.args = args
 
+    # 6. ASK the user to enter a FILENAME to save the scenario
     stdscr.clear()
-    stdscr.addstr(1, 0, "You selected the following P-Leaf routers:")
-    if len(selected_p_leaf_routers) == 0:
-        stdscr.addstr(y_offset + 1, 0, "- No P-leaf routers selected")
-    for i, item in enumerate(selected_p_leaf_routers):
-        stdscr.addstr(2 + i, 0, f"- {item}")
-
-    y_offset = 4 + len(selected_p_leaf_routers)
-    stdscr.addstr(y_offset, 0, "You selected the following X-Leaf routers:")
-    if len(selected_x_leaf_routers) == 0:
-        stdscr.addstr(y_offset + 1, 0, "- No X-leaf routers selected")
-    for i, item in enumerate(selected_x_leaf_routers):
-        stdscr.addstr(y_offset + 1 + i, 0, f"- {item}")
-
-    y_offset += 3 + len(selected_x_leaf_routers)
-    stdscr.addstr(y_offset, 0, "You selected the following EMUX routers:")
-
-    if len(selected_emux_routers) == 0:
-        stdscr.addstr(y_offset + 1, 0, "- No EMUX routers selected")
-
-    for i, item in enumerate(selected_emux_routers):
-        stdscr.addstr(y_offset + 1 + i, 0, f"- {item}")
-
-    y_offset += 3 + len(selected_emux_routers)
-    stdscr.addstr(y_offset, 0, "You selected the following fault:")
-    stdscr.addstr(y_offset + 1, 0, f"- {selected_fault}")
+    stdscr.addstr(0, 0, f"You selected the following {selected_router_type} routers:")
+    for i, item in enumerate(selected_routers):
+        stdscr.addstr(1 + i, 0, f"- {item}")
 
     for i, arg in enumerate(args):
         stdscr.addstr(y_offset + 2 + i, 0, f"- arg{i + 1}: {arg}")
@@ -152,7 +136,7 @@ def display_creator(stdscr, context):
             break
 
     stdscr.refresh()
-    action = Action(selected_fault_object, selected_p_leaf_routers + selected_x_leaf_routers + selected_emux_routers)
+    action = Action(selected_fault_object, selected_routers)
     csv = action.to_csv()
     # create a path with saved scenario path and filename
     path = os.path.join(context.TEST_CASES_PATH, file_name + ".csv")
@@ -183,4 +167,3 @@ def display_scenarios(stdscr, context):
         stdscr.clear()
         stdscr.addstr(0, 0, f"Executing scenario {selected_scenario}. Press ENTER to continue.")
         stdscr.refresh()
-

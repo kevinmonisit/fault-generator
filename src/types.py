@@ -1,8 +1,8 @@
 import os
 import csv
 from .helpers import *
-
 class Context:
+
   def __init__(self, FAULTS_CSV_PATH, ROUTERS_CSV_PATH, TEST_CASES_PATH):
     self.FAULTS_CSV_PATH = FAULTS_CSV_PATH
     self.ROUTERS_CSV_PATH = ROUTERS_CSV_PATH
@@ -13,7 +13,7 @@ class Context:
     if not os.path.exists(self.ROUTERS_CSV_PATH):
         raise FileNotFoundError(f"File not found: {self.ROUTERS_CSV_PATH}")
 
-    self.fault_list = Context.read_csv_to_faults(self.FAULTS_CSV_PATH)
+    self.fault_list = Context.parse_csv_to_faults(self.FAULTS_CSV_PATH)
     self.fault_groups = get_fault_groups(self.fault_list)
     p_leaf_routers, x_leaf_routers, emux_routers = Context.parse_csv_to_routers(self.ROUTERS_CSV_PATH)
 
@@ -29,6 +29,7 @@ class Context:
 
     with open(file_path, mode='r') as file:
         csv_reader = csv.reader(file)
+        headers = next(csv_reader)
         for row in csv_reader:
             type, name, ip = row
             router = Router(type, name, ip)
@@ -44,17 +45,18 @@ class Context:
     return p_leaf_routers, x_leaf_routers, emux_routers
 
   @staticmethod
-  def read_csv_to_faults(filename):
+  def parse_csv_to_faults(filename):
     faults = []
     with open(filename, mode='r') as file:
         csv_reader = csv.reader(file)
-        headers = next(csv_reader)  # Skip the header row
+        headers = next(csv_reader)
         for row in csv_reader:
             event = row[0]
-            group = row[1]
-            n_args = int(row[2])
+            router_type = row[1]
+            group = row[2]
+            n_args = int(row[3])
             args = row[3:3 + n_args]
-            fault = Fault(event, group, n_args, args)
+            fault = Fault(event, router_type, group, n_args, args)
             faults.append(fault)
 
     return faults
@@ -75,14 +77,16 @@ class Router:
         return f"{self.ip} - {self.name}"
 
 class Fault:
-    def __init__(self, event, group, n_args, args):
+    def __init__(self, event, router_type, group, n_args, args):
+        self.router_type = router_type
         self.event = event
         self.group = group
         self.n_args = n_args
         self.args = args
 
     def __repr__(self):
-        return f"Fault(event='{self.event}', group='{self.group}', n_args={self.n_args}, args={self.args})"
+        return f"Fault(event='{self.event}', router_type='{self.router_type} \
+            group='{self.group}', n_args={self.n_args}, args={self.args})"
 
     def __str__(self):
         return self.event
