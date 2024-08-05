@@ -1,0 +1,4 @@
+TEST_CASES_PATH=./test_cases
+FAULTS_CSV_PATH=./context/faults.csv
+ROUTERS_CSV_PATH=./context/routers.csv
+OUTPUT_LOGS_PATH=./logs

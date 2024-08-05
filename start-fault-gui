@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+import curses
+from src.helpers import *
+from src.screen.scenes import *
+from src.screen.helpers import *
+from src.types import Context
+
+
+if __name__ == "__main__":
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+    config_paths = load_config_file("./config")
+    startup_context = Context(
+        config_paths["FAULTS_CSV_PATH"],
+        config_paths["ROUTERS_CSV_PATH"],
+        config_paths["TEST_CASES_PATH"]
+    )
+
+    curses.wrapper(main_scene, startup_context)
