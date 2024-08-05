@@ -86,6 +86,17 @@ def display_arg_setter(stdscr, fault_name, num_args):
 
     return args
 
+def display_error_message(stdscr, message):
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
+
+    stdscr.clear()
+    stdscr.attron(curses.color_pair(1))
+    stdscr.addstr(0, 0, message)
+    stdscr.attroff(curses.color_pair(1))
+    stdscr.refresh()
+    stdscr.getch()
+
 def display_creator(stdscr, context):
     router_types = ["P-LEAF", "X-LEAF", "EMUX"]
 
@@ -95,17 +106,33 @@ def display_creator(stdscr, context):
 
     # 2. ASK the user to select ROUTERS of the selected ROUTER TYPE
     question = f"Select a set of {selected_router_type} routers to use and press ENTER:"
-    filtered_routers = get_routers_of_type(context.routers, selected_router_type)
+    filtered_routers = get_routers_of_type(context.get_all_routers(), selected_router_type)
+
+    if len(filtered_routers) == 0:
+        display_error_message(stdscr, "No routers found for the selected type. Press ENTER to continue.")
+        return
+
     selected_routers = display_menu_checkboxes(stdscr, question, filtered_routers)
 
     # 3. ASK the user to select a FAULT GROUP of the selected ROUTER TYPE
     faults_of_router_type = get_faults_by_router_type(context.fault_list, selected_router_type)
     question = f"Select a fault group of {selected_router_type} routers and press ENTER:"
-    selected_fault_group = display_menu_radio(stdscr, question, context.fault_groups)
+    fault_groups_of_router_type = get_fault_groups(faults_of_router_type)
+
+    if len(fault_groups_of_router_type) == 0:
+        display_error_message(stdscr, "No fault groups found for the selected router type. Press ENTER to continue.")
+        return
+
+    selected_fault_group = display_menu_radio(stdscr, question, fault_groups_of_router_type[:10])
 
     # 4. ASK the user to select a FAULT from the selected FAULT GROUP
     question = f"Select a fault from {selected_fault_group} and press ENTER:"
     specific_event_faults = get_faults_by_group(faults_of_router_type, selected_fault_group)
+
+    if len(specific_event_faults) == 0:
+        display_error_message(stdscr, "No faults found for the selected group. Press ENTER to continue.")
+        return
+
     selected_fault = display_menu_radio(stdscr, question, specific_event_faults)
 
     # 5. ASK the user to set the ARGUMENTS for the selected FAULT
@@ -119,8 +146,11 @@ def display_creator(stdscr, context):
     for i, item in enumerate(selected_routers):
         stdscr.addstr(1 + i, 0, f"- {item}")
 
+    y_offset = 3 + len(selected_routers)
+    stdscr.addstr(y_offset, 0, f"You selected the following fault: {selected_fault}")
+    y_offset += 1
     for i, arg in enumerate(args):
-        stdscr.addstr(y_offset + 2 + i, 0, f"- arg{i + 1}: {arg}")
+        stdscr.addstr(y_offset + i, 0, f"- arg{i + 1}: {arg}")
 
     y_offset += 3 + len(args)
     stdscr.addstr(y_offset, 0, "Scenario will be saved to the following path: " + context.TEST_CASES_PATH)
@@ -129,8 +159,7 @@ def display_creator(stdscr, context):
 
     # check if user inputted name, if create an error and ask again
     while file_name == "":
-        stdscr.refresh()
-        stdscr.addstr(y_offset + 3, 0, "Error! Please enter a valid nonempty name:  ")
+        display_error_message(stdscr, "Error! Please enter a valid nonempty name. Press ENTER to continue.")
         file_name = get_user_input(stdscr, " ")
         if file_name != "":
             break
@@ -145,9 +174,10 @@ def display_creator(stdscr, context):
         file.write(csv)
 
     stdscr.clear()
-    stdscr.addstr(0, 0, f"Success! File written to {context.TEST_CASES_PATH}. Press ENTER to conintue.")
+    stdscr.addstr(0, 0, f"Success! File written to {context.TEST_CASES_PATH}. Press ENTER to continue.")
     stdscr.refresh()
     stdscr.getch()
+
 
 def display_scenarios(stdscr, context):
     print("path: \n\n\n", context.TEST_CASES_PATH)
@@ -161,7 +191,7 @@ def display_scenarios(stdscr, context):
         return
 
     if selected_scenario is not None:
-        file_path = os.path.join(context.TEST_CASES_PATH, selected_scenario + ".csv")
+        file_path = os.path.join(context.TEST_CASES_PATH, selected_scenario)
         routers = Action.from_csv(file_path)
 
         stdscr.clear()

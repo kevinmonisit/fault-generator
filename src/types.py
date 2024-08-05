@@ -21,6 +21,9 @@ class Context:
     self.x_leaf_routers = x_leaf_routers
     self.emux_routers = emux_routers
 
+  def get_all_routers(self):
+    return self.p_leaf_routers + self.x_leaf_routers + self.emux_routers
+
   @staticmethod
   def parse_csv_to_routers(file_path):
     p_leaf_routers = []
