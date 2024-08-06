@@ -1,24 +1,25 @@
 import curses
 import os
 
+starting_x = 3
+
 def display_menu_checkboxes(stdscr, question, options):
     curses.curs_set(0)
     curses.start_color()
     curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
     selected_indices = set()
     current_index = 0
-    max_option_length = max(len(option) for option in options) + 4
     starting_y = 6
 
     while True:
         stdscr.clear()
         height, width = stdscr.getmaxyx()
 
-        stdscr.addstr(1, width // 2 - len(question) // 2, question)
+        stdscr.addstr(1, starting_x, question)
 
         for idx, option in enumerate(options):
             option = str(option)
-            x = width // 3 - max_option_length // 2
+            x = starting_x
             y = starting_y - len(options) // 2 + idx + 2
             if idx == current_index:
                 stdscr.attron(curses.color_pair(1))
@@ -62,11 +63,11 @@ def display_menu_radio(stdscr, question, options):
         stdscr.clear()
         height, width = stdscr.getmaxyx()
 
-        stdscr.addstr(1, width // 2 - len(question) // 2, question)
+        stdscr.addstr(1, starting_x, question)
 
         for idx, option in enumerate(options):
             option = str(option)
-            x = width // 2 - max_option_length // 2
+            x = starting_x
             y = starting_y - len(options) // 2 + idx + 2
             if idx == current_index:
                 stdscr.attron(curses.color_pair(1))

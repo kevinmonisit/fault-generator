@@ -3,3 +3,4 @@ FAULTS_CSV_PATH=./context/faults.csv
 ROUTERS_CSV_PATH=./context/routers.csv
 OUTPUT_LOGS_PATH=./logs
 GUI_CALL=./gui-call-test.sh
+LOGS_PATH=./test.log

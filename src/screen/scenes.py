@@ -1,4 +1,5 @@
 import curses
+import subprocess
 from ..context_types import Action
 import os
 from .helpers import *
@@ -8,6 +9,7 @@ def main_scene(stdscr, context):
     menuOptions = [
         "Create a test scenario",
         "Execute an existing test scenario",
+        "View latest logs",
         "Exit",
     ]
 
@@ -19,6 +21,9 @@ def main_scene(stdscr, context):
             display_creator(stdscr, context)
         elif selected_item_radio == "Execute an existing test scenario":
             display_scenarios(stdscr, context)
+        elif selected_item_radio == "View latest logs":
+            display_logs(stdscr, context)
+            pass
         elif selected_item_radio == "Exit":
             break
 
@@ -36,10 +41,10 @@ def display_arg_setter(stdscr, fault_name, num_args):
         height, width = stdscr.getmaxyx()
 
         header = "The arguments for the fault"
-        stdscr.addstr(0, (width - len(header)) // 2, header)
+        stdscr.addstr(0, starting_x, header)
 
         fault_header = f"Fault: {fault_name}"
-        stdscr.addstr(1, (width - len(fault_header)) // 2, fault_header)
+        stdscr.addstr(1, starting_x, fault_header)
 
         start_y = 3
         start_x = 2
@@ -85,6 +90,44 @@ def display_arg_setter(stdscr, fault_name, num_args):
     stdscr.clear()
 
     return args
+
+
+def display_logs(stdscr, context):
+    file_path = context.LOGS_PATH
+    curses.curs_set(0)
+    stdscr.clear()
+
+    try:
+        result = subprocess.run(['tail', '-n', '30', file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        if result.returncode != 0:
+            stdscr.addstr(0, 0, f"Error: {result.stderr.strip()}")
+        else:
+            lines_to_display = result.stdout.splitlines()
+
+            while True:
+                stdscr.clear()
+                height, width = stdscr.getmaxyx()
+
+                for idx, line in enumerate(lines_to_display):
+                    if idx < height - 1:
+                        stdscr.addstr(idx, 0, line.strip())
+
+                stdscr.addstr(height - 1, 0, "Press 'q' to exit.")
+
+                key = stdscr.getch()
+
+                if key == ord('q'):
+                    break
+
+                stdscr.refresh()
+
+    except Exception as e:
+        stdscr.addstr(0, 0, f"Error: {str(e)}")
+
+    stdscr.refresh()
+    stdscr.getch()
+
 
 def display_error_message(stdscr, message):
     curses.start_color()

@@ -15,6 +15,7 @@ if __name__ == "__main__":
         config_paths["ROUTERS_CSV_PATH"],
         config_paths["TEST_CASES_PATH"],
         config_paths["GUI_CALL"],
+        config_paths["LOGS_PATH"]
     )
 
     curses.wrapper(main_scene, startup_context)
