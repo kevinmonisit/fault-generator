@@ -104,7 +104,7 @@ class Fault:
         return len(self.event)
 
 class Action:
-    def __init__(self, fault: Fault, routers: list[Router]):
+    def __init__(self, fault: Fault, routers):
         self.fault = fault
         self.routers = routers
 
