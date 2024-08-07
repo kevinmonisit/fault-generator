@@ -68,9 +68,9 @@ def display_arg_setter(stdscr, fault_name, num_args):
 
         key = stdscr.getch()
 
-        if key == curses.KEY_DOWN:
+        if key == curses.KEY_DOWN and num_args > 0:
             current_arg = (current_arg + 1) % num_args
-        elif key == curses.KEY_UP:
+        elif key == curses.KEY_UP and num_args > 0:
             current_arg = (current_arg - 1) % num_args
         elif key == curses.KEY_ENTER or key in [10, 13]:
             if all(args):
