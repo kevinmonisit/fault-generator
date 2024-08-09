@@ -3,6 +3,29 @@ import os
 
 starting_x = 3
 
+import csv
+
+def extract_keywords_from_csv(file_path):
+    keywords_set = set()
+    try:
+        with open(file_path) as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                if len(row) > 1:
+                    # Extract the word following the keyword "event"
+                    words = row[1].strip().split()
+
+                    if "event" in words:
+                        event_index = words.index("event")
+                        if event_index + 1 < len(words):
+                            event_keyword = words[event_index + 1]
+                            keywords_set.add(event_keyword)
+    except Exception as e:
+        print(f"Error reading CSV file: {str(e)}")
+
+    return keywords_set
+
+
 def display_menu_checkboxes(stdscr, question, options):
     curses.curs_set(0)
     curses.start_color()

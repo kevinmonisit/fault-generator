@@ -1,5 +1,7 @@
 import curses
 import subprocess
+import time
+from datetime import datetime
 from ..context_types import Action
 import os
 from .helpers import *
@@ -9,7 +11,6 @@ def main_scene(stdscr, context):
     menuOptions = [
         "Create a test scenario",
         "Execute an existing test scenario",
-        "View latest logs",
         "Exit",
     ]
 
@@ -92,35 +93,48 @@ def display_arg_setter(stdscr, fault_name, num_args):
     return args
 
 
-def display_logs(stdscr, context):
-    file_path = context.LOGS_PATH
+def display_logs(stdscr, context, csv_file_path):
     curses.curs_set(0)
     stdscr.clear()
+    keywords_set = extract_keywords_from_csv(csv_file_path)
+    if not keywords_set:
+        stdscr.addstr(0, 0, "No keywords found.")
+        stdscr.refresh()
+        stdscr.getch()
+        return
 
     try:
-        result = subprocess.run(['tail', '-n', '30', file_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        while True:
+            # Run the view-logs.sh script
+            keywords_string = ' '.join(keywords_set)
+            result = subprocess.Popen(['./view-logs.sh', keywords_string], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        if result.returncode != 0:
-            stdscr.addstr(0, 0, f"Error: {result.stderr.strip()}")
-        else:
-            lines_to_display = result.stdout.splitlines()
+            # Use communicate() to get stdout and stderr
+            out, err = result.communicate()
 
-            while True:
+            if result.returncode != 0:
+                stdscr.addstr(0, 0, f"Error: {err.decode('utf-8').strip()}")
+            else:
+                lines_to_display = out.decode('utf-8').splitlines()
+
                 stdscr.clear()
                 height, width = stdscr.getmaxyx()
 
                 for idx, line in enumerate(lines_to_display):
-                    if idx < height - 1:
+                    if idx < height - 2:  # Leave space for refresh and quit message
                         stdscr.addstr(idx, 0, line.strip())
 
-                stdscr.addstr(height - 1, 0, "Press 'q' to exit.")
+                stdscr.addstr(height - 2, 0, "Press 'R' to refresh or 'q' to quit.")
 
-                key = stdscr.getch()
-
-                if key == ord('q'):
-                    break
+                while True:
+                    key = stdscr.getch()
+                    if key == ord('q'):
+                        return  # Exit the function to quit
+                    elif key == ord('r'):
+                        break  # Break the inner loop to refresh
 
                 stdscr.refresh()
+                time.sleep(1)  # Optional: Add a delay before refresh if desired
 
     except Exception as e:
         stdscr.addstr(0, 0, f"Error: {str(e)}")
@@ -248,3 +262,5 @@ def display_scenarios(stdscr, context):
         stdscr.clear()
         stdscr.addstr(0, 0, f"Executing scenario {selected_scenario}. Press ENTER to continue.")
         stdscr.refresh()
+
+        display_logs(stdscr, context, file_path)
